@@ -1,2 +1,2 @@
-import type A from "./depsA.js";
+import type A from "./DepsA.js";
 import type B from "../depsB.js";

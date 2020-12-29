@@ -1,2 +1,2 @@
-import A from "./depsA";
-import B from "../depsB";
+import A from "./DepsA.tsx";
+import B from "../depsB.ts";

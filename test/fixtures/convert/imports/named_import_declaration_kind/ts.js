@@ -1,2 +1,2 @@
-import { A, B } from "./depA";
-import { C, D } from "../depB";
+import { A, B } from "./depA.ts";
+import { C, D } from "../depB.ts";

@@ -6,12 +6,34 @@ const computeNewlines = require("./compute-newlines.js");
 const locToString = loc =>
   `${loc.start.line}:${loc.start.column}-${loc.end.line}:${loc.end.column}`;
 
-const stripSuffixFromImportSource = path => {
-  // TODO: make this configurable so we can output .ts[x]?
-  const src = /\.\.?\//.test(path.node.source.value)
-    ? path.node.source.value.replace(/\.js[x]?$/, "")
-    : path.node.source.value;
-  path.node.source = t.stringLiteral(src);
+const isUpperCase = text => {
+  const firstLetter = text.charAt(0);
+  return firstLetter === firstLetter.toUpperCase();
+};
+
+const getNewImportPath = (filePath, fileName) => {
+  let src = filePath;
+
+  if (fileName.endsWith(".js")) {
+    if (isUpperCase(fileName)) {
+      src = filePath.replace(/\.js$/, ".tsx");
+    } else {
+      src = filePath.replace(/\.js$/, ".ts");
+    }
+  } else if (fileName.endsWith(".jsx")) {
+    src = filePath.replace(/\.jsx$/, ".tsx");
+  }
+
+  return src;
+};
+
+const convertImportPath = path => {
+  const filePath = path.node.source.value;
+  const parts = filePath.split("/");
+  const fileName = parts[parts.length - 1];
+  const newImportPath = getNewImportPath(filePath, fileName);
+
+  path.node.source = t.stringLiteral(newImportPath);
 };
 
 const transformFunction = path => {
@@ -702,14 +724,14 @@ const transform = {
       }
 
       if (path.node.source) {
-        stripSuffixFromImportSource(path);
+        convertImportPath(path);
       }
     }
   },
   ImportDeclaration: {
     exit(path) {
       path.node.importKind = "value";
-      stripSuffixFromImportSource(path);
+      convertImportPath(path);
     }
   },
   ImportSpecifier: {
