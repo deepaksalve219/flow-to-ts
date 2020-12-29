@@ -84,36 +84,51 @@ const cli = argv => {
     }
   }
 
-  const files = new Set();
-  for (const arg of program.args) {
-    for (const file of glob.sync(arg)) {
-      files.add(file);
-    }
-  }
+  const files = getJsFiles(program);
 
   for (const file of files) {
-    const inFile = file;
-    const inCode = fs.readFileSync(inFile, "utf-8");
-
-    try {
-      const outCode = convert(inCode, options);
-
-      if (program.write) {
-        const extension = detectJsx(inCode) ? ".tsx" : ".ts";
-        const outFile = file.replace(/\.jsx?$/, extension);
-        fs.writeFileSync(outFile, outCode);
-      } else {
-        console.log(outCode);
-      }
-
-      if (program.deleteSource) {
-        fs.unlinkSync(inFile);
-      }
-    } catch (e) {
-      console.error(`error processing ${inFile}`);
-      console.error(e);
-    }
+    transformFileFromFlowToTs(file, options, program);
   }
 };
 
 module.exports = cli;
+
+function getJsFiles(program) {
+  const files = new Set();
+  for (const arg of program.args) {
+    for (const file of glob.sync(arg)) {
+      if (isJsFile(file)) {
+        files.add(file);
+      }
+    }
+  }
+  return files;
+}
+
+function isJsFile(file) {
+  return file.endsWith(".js") || file.endsWith(".jsx");
+}
+
+function transformFileFromFlowToTs(file, options, program) {
+  const inFile = file;
+  const inCode = fs.readFileSync(inFile, "utf-8");
+
+  try {
+    const outCode = convert(inCode, options);
+
+    if (program.write) {
+      const extension = detectJsx(inCode) ? ".tsx" : ".ts";
+      const outFile = file.replace(/\.jsx?$/, extension);
+      fs.writeFileSync(outFile, outCode);
+    } else {
+      console.log(outCode);
+    }
+
+    if (program.deleteSource) {
+      fs.unlinkSync(inFile);
+    }
+  } catch (e) {
+    console.error(`error processing ${inFile}`);
+    console.error(e);
+  }
+}
