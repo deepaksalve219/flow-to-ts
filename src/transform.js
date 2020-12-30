@@ -596,10 +596,6 @@ const transform = {
     exit(path) {
       const { exact, properties, indexers } = path.node; // TODO: callProperties, inexact
 
-      if (exact) {
-        console.warn("downgrading exact object type");
-      }
-
       // TODO: create multiple sets of elements so that we can convert
       // {x: number, ...T, y: number} to {x: number} & T & {y: number}
       const elements = [];
@@ -800,6 +796,8 @@ const transform = {
       //   true,
       //   false, // generator
       // ),
+
+      console.warn("DelcareFunction", name);
 
       path.replaceWith({
         type: "TSDeclareFunction",
