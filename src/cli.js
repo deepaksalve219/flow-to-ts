@@ -7,7 +7,7 @@ const convert = require("./convert.js");
 const detectJsx = require("./detect-jsx.js");
 const version = require("../package.json").version;
 
-const cli = argv => {
+const cli = (argv) => {
   const program = new Command();
   program
     .version(version)
@@ -67,8 +67,8 @@ const cli = argv => {
       trailingComma: program.trailingComma,
       bracketSpacing: Boolean(program.bracketSpacing),
       arrowParens: program.arrowParens,
-      printWidth: parseInt(program.printWidth)
-    }
+      printWidth: parseInt(program.printWidth),
+    },
   };
 
   if (options.prettier) {
@@ -85,9 +85,32 @@ const cli = argv => {
   }
 
   const files = getJsFiles(program);
+  const badFiles = [];
 
   for (const file of files) {
-    transformFileFromFlowToTs(file, options, program);
+    try {
+      transformFileFromFlowToTs(file, options, program);
+    } catch (e) {
+      console.error(`error processing ${file}:`);
+      console.info("-------------------------");
+      console.info(e);
+      console.info("");
+
+      badFiles.push(file);
+    }
+  }
+
+  console.info("");
+  console.info(`${files.size} files processed`);
+
+  if (badFiles.length > 0) {
+    console.info("");
+    console.warn(
+      `WARNING: ${badFiles.length}/${files.size} files were skipped due to an error`
+    );
+    for (const file of badFiles) {
+      console.warn(file);
+    }
   }
 };
 
@@ -109,26 +132,24 @@ function isJsFile(file) {
   return file.endsWith(".js") || file.endsWith(".jsx");
 }
 
+/**
+ * @throws
+ */
 function transformFileFromFlowToTs(file, options, program) {
   const inFile = file;
   const inCode = fs.readFileSync(inFile, "utf-8");
 
-  try {
-    const outCode = convert(inCode, options);
+  const outCode = convert(inCode, options);
 
-    if (program.write) {
-      const extension = detectJsx(inCode) ? ".tsx" : ".ts";
-      const outFile = file.replace(/\.jsx?$/, extension);
-      fs.writeFileSync(outFile, outCode);
-    } else {
-      console.log(outCode);
-    }
+  if (program.write) {
+    const extension = detectJsx(inCode) ? ".tsx" : ".ts";
+    const outFile = file.replace(/\.jsx?$/, extension);
+    fs.writeFileSync(outFile, outCode);
+  } else {
+    console.log(outCode);
+  }
 
-    if (program.deleteSource) {
-      fs.unlinkSync(inFile);
-    }
-  } catch (e) {
-    console.error(`error processing ${inFile}`);
-    console.error(e);
+  if (program.deleteSource) {
+    fs.unlinkSync(inFile);
   }
 }
