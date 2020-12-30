@@ -44,12 +44,6 @@
     "coverage": "jest --coverage --collectCoverageFrom=src/**/*.js --coveragePathIgnorePatterns=src/flow-to-ts.js",
     "pretty-quick": "prettier src/*.js test/*.js playground/src/*.tsx babel-generator/lib/**/*.js babel-traverse/lib/**/*.js --write"
   },
-  "husky": {
-    "hooks": {
-      "pre-push": "npm test",
-      "pre-commit": "pretty-quick --staged"
-    }
-  },
   "jest": {
     "setupFilesAfterEnv": [
       "jest-mock-console/dist/setupTestFramework.js"
