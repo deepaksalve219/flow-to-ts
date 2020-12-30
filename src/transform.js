@@ -127,6 +127,7 @@ const QualifiedReactTypeNameMap = {
   Fragment: "ReactFragment",
   Portal: "ReactPortal",
   NodeArray: "ReactNodeArray",
+  AbstractComponent: "ComponentType",
 
   // TODO: private types, e.g. React$ElementType, React$Node, etc.
 
