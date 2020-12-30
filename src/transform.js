@@ -100,7 +100,7 @@ const utilityTypes = {
 };
 
 // Mapping between React types for Flow and those for TypeScript.
-const UnqualifiedReactTypeNameMap = {
+const mapReactTypeFlowToTs = {
   SyntheticEvent: "SyntheticEvent",
   SyntheticAnimationEvent: "AnimationEvent",
   SyntheticClipboardEvent: "ClipboardEvent",
@@ -115,7 +115,6 @@ const UnqualifiedReactTypeNameMap = {
   SyntheticPointerEvent: "PointerEvent",
   SyntheticTouchEvent: "TouchEvent",
   SyntheticTransitionEvent: "TransitionEvent",
-
   Node: "ReactNode",
   Text: "ReactText",
   Child: "ReactChild",
@@ -127,22 +126,9 @@ const UnqualifiedReactTypeNameMap = {
   AbstractComponent: "ComponentType",
 };
 
-// Only types with different names are included.
-const QualifiedReactTypeNameMap = {
-  Node: "ReactNode",
-  Text: "ReactText",
-  Child: "ReactChild",
-  Children: "ReactChildren",
-  Element: "ReactElement",
-  Fragment: "ReactFragment",
-  Portal: "ReactPortal",
-  NodeArray: "ReactNodeArray",
-  AbstractComponent: "ComponentType",
+const reactFlowTypes = new Set(Object.keys(mapReactTypeFlowToTs))
 
-  // TODO: private types, e.g. React$ElementType, React$Node, etc.
-
-  // TODO: handle ComponentType, ElementConfig, ElementProps, etc.
-};
+const isReactFlowType = text => reactFlowTypes.has(text)
 
 const transform = {
   Program: {
@@ -476,13 +462,13 @@ const transform = {
         }
       }
 
-      if (typeName.name in UnqualifiedReactTypeNameMap) {
+      if (typeName.name in mapReactTypeFlowToTs) {
         // TODO: make sure that React was imported in this file
         path.replaceWith(
           t.tsTypeReference(
             t.tsQualifiedName(
               t.identifier("React"),
-              t.identifier(UnqualifiedReactTypeNameMap[typeName.name])
+              t.identifier(mapReactTypeFlowToTs[typeName.name])
             ),
             typeParameters
           )
@@ -498,11 +484,11 @@ const transform = {
       const left = qualification;
       const right = id;
 
-      if (left.name === "React" && right.name in QualifiedReactTypeNameMap) {
+      if (left.name === "React" && right.name in mapReactTypeFlowToTs) {
         path.replaceWith(
           t.tsQualifiedName(
             left,
-            t.identifier(QualifiedReactTypeNameMap[right.name])
+            t.identifier(mapReactTypeFlowToTs[right.name])
           )
         );
       } else {
@@ -743,6 +729,7 @@ const transform = {
     exit(path) {
       path.node.importKind = "value";
       convertImportPath(path);
+      removeImportsOfReactFlowTypes(path);
     },
   },
   ImportSpecifier: {
@@ -835,3 +822,15 @@ const transform = {
 };
 
 module.exports = transform;
+
+function removeImportsOfReactFlowTypes(path) {
+  if (path.node.source.value === 'react') {
+    const newSpecifiers = path.node.specifiers.filter(node => !isReactFlowType(node.local.name));
+
+    if (newSpecifiers.length > 0) {
+      path.node.specifiers = newSpecifiers
+    } else {``
+      path.remove()
+    }
+  }
+}
