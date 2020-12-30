@@ -115,6 +115,16 @@ const UnqualifiedReactTypeNameMap = {
   SyntheticPointerEvent: "PointerEvent",
   SyntheticTouchEvent: "TouchEvent",
   SyntheticTransitionEvent: "TransitionEvent",
+
+  Node: "ReactNode",
+  Text: "ReactText",
+  Child: "ReactChild",
+  Children: "ReactChildren",
+  Element: "ReactElement",
+  Fragment: "ReactFragment",
+  Portal: "ReactPortal",
+  NodeArray: "ReactNodeArray",
+  AbstractComponent: "ComponentType",
 };
 
 // Only types with different names are included.
