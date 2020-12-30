@@ -3,19 +3,23 @@ const t = require("@babel/types");
 
 const computeNewlines = require("./compute-newlines.js");
 
-const locToString = loc =>
+const locToString = (loc) =>
   `${loc.start.line}:${loc.start.column}-${loc.end.line}:${loc.end.column}`;
 
-const isUpperCase = text => {
+const isUpperCase = (text) => {
   const firstLetter = text.charAt(0);
   return firstLetter === firstLetter.toUpperCase();
+};
+
+const isDoubleUpperCase = (text) => {
+  return isUpperCase(text.charAt(0)) && isUpperCase(text.charAt(1));
 };
 
 const getNewImportPath = (filePath, fileName) => {
   let src = filePath;
 
   if (fileName.endsWith(".js")) {
-    if (isUpperCase(fileName)) {
+    if (isUpperCase(fileName) && !isDoubleUpperCase(fileName)) {
       src = filePath.replace(/\.js$/, ".tsx");
     } else {
       src = filePath.replace(/\.js$/, ".ts");
@@ -27,7 +31,7 @@ const getNewImportPath = (filePath, fileName) => {
   return src;
 };
 
-const convertImportPath = path => {
+const convertImportPath = (path) => {
   const filePath = path.node.source.value;
   const parts = filePath.split("/");
   const fileName = parts[parts.length - 1];
@@ -36,7 +40,7 @@ const convertImportPath = path => {
   path.node.source = t.stringLiteral(newImportPath);
 };
 
-const transformFunction = path => {
+const transformFunction = (path) => {
   if (path.node.predicate) {
     console.warn(`removing %checks at ${locToString(path.node.predicate.loc)}`);
     delete path.node.predicate;
@@ -50,38 +54,38 @@ const transformFunction = path => {
 
 // TODO: figure out how to template these inline definitions
 const utilityTypes = {
-  $Keys: typeAnnotation => {
+  $Keys: (typeAnnotation) => {
     // TODO: patch @babel/types - tsTypeOperator should accept two arguments
     // return t.tsTypeOperator(typeAnnotation, "keyof");
     return {
       type: "TSTypeOperator",
       typeAnnotation,
-      operator: "keyof"
+      operator: "keyof",
     };
   },
-  $Values: typeAnnotation => {
+  $Values: (typeAnnotation) => {
     return t.tsIndexedAccessType(
       typeAnnotation,
       {
         type: "TSTypeOperator",
         typeAnnotation,
-        operator: "keyof"
+        operator: "keyof",
       }
       // TODO: patch @babel/types - tsTypeOperator should accept two arguments
       //t.tsTypeOperator(typeAnnotation, "keyof"),
     );
   },
-  $ReadOnly: typeAnnotation => {
+  $ReadOnly: (typeAnnotation) => {
     const typeName = t.identifier("Readonly");
     const typeParameters = t.tsTypeParameterInstantiation([typeAnnotation]);
     return t.tsTypeReference(typeName, typeParameters);
   },
-  $Shape: typeAnnotation => {
+  $Shape: (typeAnnotation) => {
     const typeName = t.identifier("Partial");
     const typeParameters = t.tsTypeParameterInstantiation([typeAnnotation]);
     return t.tsTypeReference(typeName, typeParameters);
   },
-  $NonMaybeType: typeAnnotation => {
+  $NonMaybeType: (typeAnnotation) => {
     const typeName = t.identifier("NonNullable");
     const typeParameters = t.tsTypeParameterInstantiation([typeAnnotation]);
     return t.tsTypeReference(typeName, typeParameters);
@@ -92,7 +96,7 @@ const utilityTypes = {
   $Diff: null,
   $PropertyType: null,
   $ElementType: null,
-  $Call: null
+  $Call: null,
 };
 
 // Mapping between React types for Flow and those for TypeScript.
@@ -110,7 +114,7 @@ const UnqualifiedReactTypeNameMap = {
   SyntheticWheelEvent: "WheelEvent",
   SyntheticPointerEvent: "PointerEvent",
   SyntheticTouchEvent: "TouchEvent",
-  SyntheticTransitionEvent: "TransitionEvent"
+  SyntheticTransitionEvent: "TransitionEvent",
 };
 
 // Only types with different names are included.
@@ -122,7 +126,7 @@ const QualifiedReactTypeNameMap = {
   Element: "ReactElement",
   Fragment: "ReactFragment",
   Portal: "ReactPortal",
-  NodeArray: "ReactNodeArray"
+  NodeArray: "ReactNodeArray",
 
   // TODO: private types, e.g. React$ElementType, React$Node, etc.
 
@@ -157,13 +161,13 @@ const transform = {
 
         // filter out flow specific comments
         if (stmt.leadingComments) {
-          stmt.leadingComments = stmt.leadingComments.filter(comment => {
+          stmt.leadingComments = stmt.leadingComments.filter((comment) => {
             const value = comment.value.trim();
             return value !== "@flow" && !value.startsWith("$FlowFixMe");
           });
         }
         if (stmt.trailingComments) {
-          stmt.trailingComments = stmt.trailingComments.filter(comment => {
+          stmt.trailingComments = stmt.trailingComments.filter((comment) => {
             const value = comment.value.trim();
             return value !== "@flow" && !value.startsWith("$FlowFixMe");
           });
@@ -182,7 +186,7 @@ const transform = {
     exit(path, state) {
       const { body } = path.node;
       if (state.usedUtilityTypes.size > 0) {
-        const specifiers = [...state.usedUtilityTypes].map(name => {
+        const specifiers = [...state.usedUtilityTypes].map((name) => {
           const imported = t.identifier(name);
           const local = t.identifier(name);
           return t.importSpecifier(local, imported);
@@ -193,10 +197,10 @@ const transform = {
         path.node.newlines = [
           [], // place the new import at the start of the file
           [undefined, ...path.node.newlines[0]],
-          ...path.node.newlines.slice(1)
+          ...path.node.newlines.slice(1),
         ];
       }
-    }
+    },
   },
   BlockStatement: {
     // TODO: deal with empty functions
@@ -205,7 +209,7 @@ const transform = {
       if (body.length > 0) {
         path.node.newlines = computeNewlines(path.node);
       }
-    }
+    },
   },
   ObjectExpression: {
     enter(path) {
@@ -213,7 +217,7 @@ const transform = {
       if (properties.length > 0) {
         path.node.newlines = computeNewlines(path.node);
       }
-    }
+    },
   },
   SwitchStatement: {
     enter(path) {
@@ -221,7 +225,7 @@ const transform = {
       if (cases.length > 0) {
         path.node.newlines = computeNewlines(path.node);
       }
-    }
+    },
   },
   ClassBody: {
     enter(path) {
@@ -229,7 +233,7 @@ const transform = {
       if (body.length > 0) {
         path.node.newlines = computeNewlines(path.node);
       }
-    }
+    },
   },
 
   // Basic Types
@@ -291,7 +295,7 @@ const transform = {
     exit(path) {
       const { typeAnnotation } = path.node;
       path.replaceWith(t.tsTypeAnnotation(typeAnnotation));
-    }
+    },
   },
   NullableTypeAnnotation: {
     exit(path) {
@@ -303,23 +307,23 @@ const transform = {
             ? typeAnnotation.typeAnnotation
             : typeAnnotation,
           t.tsNullKeyword(),
-          t.tsUndefinedKeyword()
+          t.tsUndefinedKeyword(),
         ])
       );
-    }
+    },
   },
   ArrayTypeAnnotation: {
     exit(path) {
       const { elementType } = path.node;
       path.replaceWith(t.tsArrayType(elementType));
-    }
+    },
   },
   TupleTypeAnnotation: {
     exit(path) {
       const { types } = path.node;
       const elementTypes = types;
       path.replaceWith(t.tsTupleType(elementTypes));
-    }
+    },
   },
   FunctionTypeAnnotation: {
     exit(path) {
@@ -328,7 +332,7 @@ const transform = {
         if (param.name === "") {
           return {
             ...param,
-            name: `arg${index}`
+            name: `arg${index}`,
           };
         } else {
           return param;
@@ -339,7 +343,7 @@ const transform = {
           type: "RestElement",
           argument: rest,
           decorators: [], // flow doesn't support decorators
-          typeAnnotation: rest.typeAnnotation
+          typeAnnotation: rest.typeAnnotation,
         };
         // TODO: patch @babel/types - t.restElement omits typeAnnotation
         // const restElement = t.restElement(rest, [], rest.typeAnnotation);
@@ -357,7 +361,7 @@ const transform = {
             )
           : t.tsFunctionType(typeParameters, parameters, typeAnnotation)
       );
-    }
+    },
   },
   FunctionTypeParam: {
     exit(path) {
@@ -367,24 +371,24 @@ const transform = {
         type: "Identifier",
         name: name ? name.name : "",
         optional,
-        typeAnnotation: t.tsTypeAnnotation(typeAnnotation)
+        typeAnnotation: t.tsTypeAnnotation(typeAnnotation),
       };
       // TODO: patch @babel/types - t.identifier omits typeAnnotation
       // const identifier = t.identifier(name.name, decorators, optional, t.tsTypeAnnotation(typeAnnotation));
       path.replaceWith(identifier);
-    }
+    },
   },
   TypeParameterInstantiation: {
     exit(path) {
       const { params } = path.node;
       path.replaceWith(t.tsTypeParameterInstantiation(params));
-    }
+    },
   },
   TypeParameterDeclaration: {
     exit(path) {
       const { params } = path.node;
       path.replaceWith(t.tsTypeParameterDeclaration(params));
-    }
+    },
   },
   TypeParameter: {
     exit(path) {
@@ -396,12 +400,12 @@ const transform = {
         type: "TSTypeParameter",
         constraint: bound && bound.typeAnnotation,
         default: path.node.default,
-        name
+        name,
       };
       // TODO: patch @babel/types - tsTypeParameter omits name
       // const typeParameter = t.tsTypeParameter(constraint, _default, name));
       path.replaceWith(typeParameter);
-    }
+    },
   },
   GenericTypeAnnotation: {
     exit(path, state) {
@@ -475,7 +479,7 @@ const transform = {
       } else {
         path.replaceWith(t.tsTypeReference(typeName, typeParameters));
       }
-    }
+    },
   },
   QualifiedTypeIdentifier: {
     exit(path) {
@@ -493,7 +497,7 @@ const transform = {
       } else {
         path.replaceWith(t.tsQualifiedName(left, right));
       }
-    }
+    },
   },
   ObjectTypeProperty: {
     exit(path) {
@@ -520,7 +524,7 @@ const transform = {
           parameters: value.parameters,
           typeAnnotation: value.typeAnnotation,
           computed,
-          optional
+          optional,
         };
         // TODO: patch @babel/types - tsMethodSignature ignores two out of the six params
         // const methodSignature = t.tsMethodSignature(key, value.typeParameters, value.parameters, value.typeAnnotation, computed, optional);
@@ -533,13 +537,13 @@ const transform = {
           // initializer,
           computed,
           optional,
-          readonly
+          readonly,
         };
         // TODO: patch @babel/types - tsPropertySignature ignores typeAnnotation, optional, and readonly
         // const = propertySignature = t.tsPropertySignature(key, typeAnnotation, initializer, computed, optional, readonly),
         path.replaceWith(propertySignature);
       }
-    }
+    },
   },
   ObjectTypeIndexer: {
     exit(path) {
@@ -554,7 +558,7 @@ const transform = {
       const identifier = {
         type: "Identifier",
         name: id ? id.name : "key",
-        typeAnnotation: t.tsTypeAnnotation(key)
+        typeAnnotation: t.tsTypeAnnotation(key),
       };
       // TODO: patch @babel/types - t.identifier omits typeAnnotation
       // const identifier = t.identifier(name.name, decorators, optional, t.tsTypeAnnotation(typeAnnotation));
@@ -563,12 +567,12 @@ const transform = {
         type: "TSIndexSignature",
         parameters: [identifier], // TODO: figure when multiple parameters are used
         typeAnnotation: t.tsTypeAnnotation(value),
-        readonly
+        readonly,
       };
       // TODO: patch @babel/types - t.tsIndexSignature omits readonly
       // const indexSignature = t.tsIndexSignature([identifier], t.tsTypeAnnotation(value), readonly);
       path.replaceWith(indexSignature);
-    }
+    },
   },
   ObjectTypeAnnotation: {
     enter(path, state) {
@@ -611,7 +615,7 @@ const transform = {
       }
 
       // TODO: maintain the position of indexers
-      indexers.forEach(indexer => {
+      indexers.forEach((indexer) => {
         const value = indexer.typeAnnotation.typeAnnotation;
         const key = indexer.parameters[0].typeAnnotation.typeAnnotation;
         if (
@@ -628,7 +632,7 @@ const transform = {
             type: "TSMappedType",
             typeParameter: typeParameter,
             typeAnnotation: value,
-            optional: true
+            optional: true,
           };
 
           spreads.push(mappedType);
@@ -646,26 +650,26 @@ const transform = {
         typeLiteral.newlines = path.node.newlines;
         path.replaceWith(typeLiteral);
       }
-    }
+    },
   },
   TypeAlias: {
     exit(path) {
       const { id, typeParameters, right } = path.node;
 
       path.replaceWith(t.tsTypeAliasDeclaration(id, typeParameters, right));
-    }
+    },
   },
   IntersectionTypeAnnotation: {
     exit(path) {
       const { types } = path.node;
       path.replaceWith(t.tsIntersectionType(types));
-    }
+    },
   },
   UnionTypeAnnotation: {
     exit(path) {
       const { types } = path.node;
       path.replaceWith(t.tsUnionType(types));
-    }
+    },
   },
   TypeofTypeAnnotation: {
     exit(path) {
@@ -674,7 +678,7 @@ const transform = {
       // TSTypeReference.
       const exprName = argument.typeName;
       path.replaceWith(t.tsTypeQuery(exprName));
-    }
+    },
   },
   TypeCastExpression: {
     exit(path, state) {
@@ -692,7 +696,7 @@ const transform = {
         typeAnnotation.typeAnnotation
       );
       path.replaceWith(tsAsExpression);
-    }
+    },
   },
   InterfaceDeclaration: {
     exit(path) {
@@ -703,19 +707,19 @@ const transform = {
       path.replaceWith(
         t.tsInterfaceDeclaration(id, typeParameters, _extends, body)
       );
-    }
+    },
   },
   InterfaceExtends: {
     exit(path) {
       const { id, typeParameters } = path.node;
       path.replaceWith(t.tsExpressionWithTypeArguments(id, typeParameters));
-    }
+    },
   },
   ClassImplements: {
     exit(path) {
       const { id, typeParameters } = path.node;
       path.replaceWith(t.tsExpressionWithTypeArguments(id, typeParameters));
-    }
+    },
   },
   ExportDeclaration: {
     exit(path) {
@@ -726,18 +730,18 @@ const transform = {
       if (path.node.source) {
         convertImportPath(path);
       }
-    }
+    },
   },
   ImportDeclaration: {
     exit(path) {
       path.node.importKind = "value";
       convertImportPath(path);
-    }
+    },
   },
   ImportSpecifier: {
     exit(path) {
       path.node.importKind = "value";
-    }
+    },
   },
   DeclareVariable: {
     exit(path) {
@@ -752,9 +756,9 @@ const transform = {
         type: "VariableDeclaration",
         kind: "var",
         declarations: [t.variableDeclarator(id)],
-        declare: true
+        declare: true,
       });
-    }
+    },
   },
   DeclareClass: {
     exit(path) {
@@ -774,9 +778,9 @@ const transform = {
           ? superClass.typeParameters
           : undefined,
         body,
-        declare: true
+        declare: true,
       });
-    }
+    },
   },
   DeclareFunction: {
     exit(path) {
@@ -805,9 +809,9 @@ const transform = {
         returnType: functionType.typeAnnotation,
         declare: !t.isDeclareExportDeclaration(path.parent),
         async: false, // TODO
-        generator: false // TODO
+        generator: false, // TODO
       });
-    }
+    },
   },
   DeclareExportDeclaration: {
     exit(path) {
@@ -815,10 +819,10 @@ const transform = {
 
       path.replaceWith({
         type: _default ? "ExportDefaultDeclaration" : "ExportNamedDeclaration",
-        declaration
+        declaration,
       });
-    }
-  }
+    },
+  },
 };
 
 module.exports = transform;
