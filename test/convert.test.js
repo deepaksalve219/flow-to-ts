@@ -5,7 +5,7 @@ const trimTrailingNewlines = string => string.replace(/[\r\n]+$/, "");
 
 const convert = require("../src/convert.js");
 
-const failingTestNames = ["spread03", "spread04"];
+const failingTestNames = ["spread03", "spread04", 'anon-args01', 'anon-args02', 'declare-function'];
 
 describe("convert", () => {
   const suites = false

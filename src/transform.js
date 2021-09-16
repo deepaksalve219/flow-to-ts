@@ -364,15 +364,33 @@ const transform = {
     exit(path) {
       const { name, optional, typeAnnotation } = path.node;
       const decorators = []; // flow doesn't support decorators
-      const identifier = {
-        type: "Identifier",
-        name: name ? name.name : "",
-        optional,
-        typeAnnotation: t.tsTypeAnnotation(typeAnnotation),
-      };
+      let identifier;
+
+      if (name && name.name) {
+        identifier = {
+          type: "Identifier",
+          name: name.name,
+          optional,
+          typeAnnotation: t.tsTypeAnnotation(typeAnnotation),
+        };
+      } else if (typeAnnotation && typeAnnotation.typeName && typeAnnotation.typeName.type === 'Identifier') {
+        identifier = {
+          type: 'Identifier',
+          name: typeAnnotation.typeName.name,
+          optional,
+          typeAnnotation: t.tsTypeAnnotation(t.tsAnyKeyword()),
+        };
+      }
+
+      // const identifier = {
+      //   type: "Identifier",
+      //   name: name ? name.name : "",
+      //   optional,
+      //   typeAnnotation: t.tsTypeAnnotation(typeAnnotation),
+      // };
       // TODO: patch @babel/types - t.identifier omits typeAnnotation
       // const identifier = t.identifier(name.name, decorators, optional, t.tsTypeAnnotation(typeAnnotation));
-      path.replaceWith(identifier);
+      if (identifier) path.replaceWith(identifier);
     },
   },
   TypeParameterInstantiation: {

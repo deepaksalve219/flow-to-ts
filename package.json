@@ -27,8 +27,11 @@
     "trim-right": "^1.0.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.15.6",
     "@types/jest": "^24.0.11",
     "@types/typescript": "^2.0.0",
+    "babel-core": "^7.0.0-0",
+    "babel-loader": "7.1.5",
     "codecov": "^3.2.0",
     "flow-bin": "^0.98.0",
     "husky": "^1.3.1",
@@ -37,10 +40,14 @@
     "jest-mock-process": "^1.2.0",
     "pretty-quick": "^1.10.0",
     "tmp": "^0.1.0",
-    "typescript": "^3.4.5"
+    "typescript": "^3.4.5",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.2.3",
+    "webpack-node-externals": "^3.0.0"
   },
   "scripts": {
     "test": "jest",
+    "build": "webpack --progress",
     "coverage": "jest --coverage --collectCoverageFrom=src/**/*.js --coveragePathIgnorePatterns=src/flow-to-ts.js",
     "pretty-quick": "prettier src/*.js test/*.js playground/src/*.tsx babel-generator/lib/**/*.js babel-traverse/lib/**/*.js --write"
   },
